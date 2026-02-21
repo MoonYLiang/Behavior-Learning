@@ -12,7 +12,7 @@ Batch = Union[Tuple[torch.Tensor, torch.Tensor], Dict[str, torch.Tensor]]
 
 
 @dataclass
-class EarlyStopper:
+class EarlyStop:
     patience: int = 10
     min_delta: float = 0.0
     mode: str = "min"  
@@ -53,9 +53,10 @@ class TrainConfig:
     mixed_precision: bool = False
 
     early_stop: bool = True
-    early_patience: int = 20
-    early_min_delta: float = 0.0
-    early_mode: str = "min"
+    patience: int = 20
+    min_delta: float = 0.0
+    mode: str = "min"
+    monitor_name: str = "val_loss"
 
     log_every: int = 1
     verbose: bool = False  
@@ -73,7 +74,7 @@ class BaseTrainer:
         model: nn.Module,
         optim_cfg: U.OptimConfig,
         train_cfg: TrainConfig,
-        extract_fn: Optional[Callable[[nn.Module], Dict[str, Any]]] = None,
+        monitor_fn: Optional[Callable[[nn.Module, DataLoader, torch.device], float]] = None,
     ) -> None:
         self.model = model
         self.optim_cfg = optim_cfg
@@ -81,8 +82,12 @@ class BaseTrainer:
 
         self.device = U.auto_device(train_cfg.device)
         self.model.to(self.device)
+        self.monitor_fn = monitor_fn
+        self.monitor_name = str(train_cfg.monitor_name)
+        if self.monitor_fn is not None and self.monitor_name == "val_loss":
+            self.monitor_name = "val_metric"
 
-        self.optimizer: Optional[torch.optim.Optimizer] = None  # Will be created in fit()
+        self.optimizer: Optional[torch.optim.Optimizer] = None  
 
         use_mixed_precision = bool(train_cfg.mixed_precision)
         if use_mixed_precision and self.device.type != "cuda":
@@ -91,18 +96,18 @@ class BaseTrainer:
             use_mixed_precision = False
         
         self.amp: U.AMPState = U.make_amp(self.device, mixed_precision=use_mixed_precision)
-        self.early_stopper: Optional[EarlyStopper] = None
+        self.early_stop: Optional[EarlyStop] = None
         if train_cfg.early_stop:
-            self.early_stopper = EarlyStopper(
-                patience=train_cfg.early_patience,
-                min_delta=train_cfg.early_min_delta,
-                mode=train_cfg.early_mode,
+            self.early_stop = EarlyStop(
+                patience=train_cfg.patience,
+                min_delta=train_cfg.min_delta,
+                mode=train_cfg.mode,
             )
 
-        self.extract_fn = extract_fn
         self.history: Dict[str, list] = {
             "train_loss": [],
             "val_loss": [],
+            "val_monitor": [],
         }
 
     def training_step(self, batch: Batch) -> torch.Tensor:
@@ -172,6 +177,14 @@ class BaseTrainer:
                 n_batches += 1
 
         return total / max(n_batches, 1)
+
+    def evaluate_monitor(self, loader: DataLoader, fallback_loss: float) -> float:
+        if self.monitor_fn is None:
+            return float(fallback_loss)
+
+        self.model.eval()
+        with torch.no_grad():
+            return float(self.monitor_fn(self.model, loader, self.device))
     
     def fit(
         self,
@@ -210,13 +223,13 @@ class BaseTrainer:
             )
 
         if self.optimizer is None:
-            first_batch = next(iter(train_dl))
-            first_batch = U.move_batch_to_device(first_batch, self.device)
+            init_batch = next(iter(train_dl))
+            init_batch = U.move_batch_to_device(init_batch, self.device)
 
             if hasattr(self.model, 'build') and hasattr(self.model, 'backbone'):
                 if self.model.backbone is None:
-                    X_first, y_first = first_batch
-                    self.model.build(X_first, y_first)
+                    X_init, y_init = init_batch
+                    self.model.build(X_init, y_init)
 
             self.optimizer = U.build_optimizer(
                 model=self.model,
@@ -235,21 +248,29 @@ class BaseTrainer:
             if val_dl is not None:
                 val_loss = self.evaluate(val_dl)
                 self.history["val_loss"].append(float(val_loss))
+                monitor_value = self.evaluate_monitor(val_dl, val_loss)
+                self.history["val_monitor"].append(float(monitor_value))
             else:
                 self.history["val_loss"].append(float("nan"))
+                monitor_value = float(train_loss)
+                self.history["val_monitor"].append(float("nan"))
 
-            monitor_value = float(val_loss) if val_loss is not None else float(train_loss)
+            stop_training = False
+            if self.early_stop is not None and val_dl is not None:
+                prev_best_epoch = self.early_stop.best_epoch
+                stop_training = self.early_stop.step(monitor_value, epoch)
+                improved = self.early_stop.best_epoch != prev_best_epoch
+            elif val_dl is not None:
+                improved = (best_metric is None) or (
+                    monitor_value < best_metric if cfg.mode == "min" else monitor_value > best_metric
+                )
+            else:
+                improved = False
 
-            if best_metric is None:
+            if improved:
                 best_metric = monitor_value
                 best_epoch = epoch
                 best_state = {k: v.detach().cpu().clone() for k, v in self.model.state_dict().items()}
-            else:
-                improved = monitor_value < best_metric if cfg.early_mode == "min" else monitor_value > best_metric
-                if improved:
-                    best_metric = monitor_value
-                    best_epoch = epoch
-                    best_state = {k: v.detach().cpu().clone() for k, v in self.model.state_dict().items()}
 
             if cfg.verbose and (epoch + 1) % cfg.log_every == 0:
                 if val_loss is None:
@@ -257,24 +278,27 @@ class BaseTrainer:
                 else:
                     print(f"[Epoch {epoch+1:04d}] train_loss={train_loss:.6f} val_loss={val_loss:.6f}")
 
-            if self.early_stopper is not None and val_dl is not None:
-                stop_training = self.early_stopper.step(monitor_value, epoch)
+            if self.early_stop is not None and val_dl is not None:
                 if stop_training:
                     if cfg.verbose:
                         print(
                             f"Early stopping at epoch {epoch+1}, "
-                            f"best_epoch={self.early_stopper.best_epoch+1}, "
-                            f"best_val={self.early_stopper.best_value:.6f}"
+                            f"best_epoch={self.early_stop.best_epoch+1}, "
+                            f"best_{self.monitor_name}={self.early_stop.best_value:.6f}"
                         )
                     break
 
         if best_state is not None:
             self.model.load_state_dict(best_state)
+        elif val_dl is None and len(self.history["train_loss"]) > 0:
+            best_epoch = len(self.history["train_loss"]) - 1
+            best_metric = float(self.history["train_loss"][-1])
 
         result: Dict[str, Any] = {
             "history": self.history,
             "best_epoch": best_epoch,
             "best_metric": best_metric,
+            "best_metric_name": self.monitor_name,
             "train_cfg": asdict(cfg),
             "optim_cfg": asdict(self.optim_cfg),
             "device": str(self.device),
@@ -282,13 +306,10 @@ class BaseTrainer:
             "amp_dtype": str(self.amp.dtype).replace("torch.", ""),
         }
 
-        if self.extract_fn is not None:
-            result["extracted_params"] = self.extract_fn(self.model)
-
         if return_state_dict:
             result["state_dict"] = {k: v.detach().cpu().clone() for k, v in self.model.state_dict().items()}
         
-        if hasattr(self, 'export_structure') and callable(getattr(self, 'export_structure', None)):
-            self.export_structure(result=result)
+        if hasattr(self, '_export_if_enabled') and callable(getattr(self, '_export_if_enabled', None)):
+            self._export_if_enabled(result=result)
         
         return result

@@ -2,12 +2,21 @@ import torch
 from typing import Callable, Tuple
 
 __all__ = [
+    "first_activation",
     "second_activation",
     "third_activation",
     "infer_num_classes",
     "onehot_candidates",
     "enumerate_onehot_logits",
 ]
+
+def first_activation(z: torch.Tensor, first_act_func: str = "tanh") -> torch.Tensor:
+    if first_act_func == "tanh":
+        return torch.tanh(z)
+    if first_act_func == "none":
+        return z
+    raise ValueError(f"Unknown first_act_func='{first_act_func}'. Use 'tanh' or 'none'.")
+
 
 def second_activation(z: torch.Tensor, second_act_func: str, beta: float = 1.0) -> torch.Tensor:
     if second_act_func == "relu":
@@ -50,10 +59,9 @@ def onehot_candidates(m: int, device: torch.device, dtype: torch.dtype) -> torch
 
 
 def enumerate_onehot_logits(
-    score_fn: Callable[[torch.Tensor, torch.Tensor, float], torch.Tensor],
+    score_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
     x: torch.Tensor,
     m: int,
-    beta: float = 1.0,
 ) -> torch.Tensor:
 
     B = x.shape[0]
@@ -64,6 +72,6 @@ def enumerate_onehot_logits(
     Y = onehot_candidates(m, device, dtype)    
     Y_rep = Y.repeat(B, 1)                     
 
-    e = score_fn(X_rep, Y_rep, beta=beta)      
+    e = score_fn(X_rep, Y_rep)      
     e = e.view(B, m)
     return e

@@ -22,6 +22,13 @@ def _safe_numpy(t):
     return np.asarray(t)
 
 
+def _get_bl_unit(block):
+    unit = getattr(block, "unit", None)
+    if unit is None:
+        raise AttributeError("Block has no attribute 'unit' (expected BLBlock.unit).")
+    return unit
+
+
 def _get_lambdas(unit):
     lam = unit.lam 
     if getattr(unit, "constrain_lambda", False):
@@ -52,19 +59,12 @@ def _get_blocks(model) -> list:
     return list(blocks)
 
 
-def _get_layer_n_sub(model) -> Optional[Tuple[int, ...]]:
+def _get_hidden_dims(model) -> Optional[Tuple[int, ...]]:
     backbone = _get_backbone(model)
     v = getattr(backbone, "hidden_dims", None)
     if v is None:
         return None
     return tuple(map(int, v))
-
-
-def _get_bl_unit(block):
-    unit = getattr(block, "unit", None)
-    if unit is None:
-        raise AttributeError("Block has no attribute 'unit' (expected BLBlock.unit).")
-    return unit
 
 
 def _get_output_linears(model) -> Dict[str, torch.nn.Linear]:
@@ -240,7 +240,7 @@ def export_structure(
 ):
 
     blocks = _get_blocks(model)
-    hidden_dims = _get_layer_n_sub(model)
+    hidden_dims = _get_hidden_dims(model)
 
     if feature_names is not None:
         feat_names = list(feature_names)

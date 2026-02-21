@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 from .base import TrainConfig
-from .utils import OptimConfig
+from .utils import OptimConfig, ExportConfig
 from .continuous import ContinuousTrainer
 from .discrete import DiscreteTrainer
-from .amortized import AmortizedFitConfig, fit_amortized_predictor
+from .amortized import AmortizedConfig, fit_amortized_predictor
 
 __all__ = [
     "OptimConfig",
     "TrainConfig",
+    "ExportConfig",
     "ContinuousTrainer",
     "DiscreteTrainer",
-    "AmortizedFitConfig",
+    "AmortizedConfig",
     "fit_amortized_predictor"
 ]

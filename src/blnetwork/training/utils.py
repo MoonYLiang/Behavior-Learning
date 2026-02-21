@@ -2,17 +2,27 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union, List
 from pathlib import Path
 
-import torch
-from torch.amp import GradScaler, autocast
+import torch 
+
 import random
 import numpy as np
 import os
 import torch.nn as nn
 
-from pybl.export import export_structure
+try:
+    from torch.amp import autocast  
+except Exception:
+    from torch.cuda.amp import autocast 
+
+try:
+    from torch.amp import GradScaler  
+except Exception:  
+    from torch.cuda.amp import GradScaler 
+
+from blnetwork.export import export_structure
 
 Batch = Union[Tuple[torch.Tensor, torch.Tensor], Dict[str, torch.Tensor]]
 
@@ -53,35 +63,9 @@ def resolve_device(
     return auto_device()
 
 
-def export_artifacts(
-    model: nn.Module,
-    export_model_path: Optional[str] = None,
-    export_state_dict_path: Optional[str] = None,
-    df=None,
-    feature_names=None,
-    result: Optional[Dict] = None,
-) -> None:
-
-    if export_model_path is None:
-        export_structure(model, df, feature_names)
-    else:
-        export_path = Path(export_model_path)
-        export_path.parent.mkdir(parents=True, exist_ok=True)
-        export_structure(model, df, feature_names, txt_path=str(export_path))
-        
-    if export_state_dict_path is not None:
-        sd_path = Path(export_state_dict_path)
-        sd_path.parent.mkdir(parents=True, exist_ok=True)
-
-        if result is not None and "state_dict" in result:
-            torch.save(result["state_dict"], sd_path)
-        else:
-            torch.save(model.state_dict(), sd_path)
-
-
 @dataclass
 class OptimConfig:
-    optimizer: str = "adam"         
+    optim: str = "adam"         
     lr: float = 1e-3
     weight_decay: float = 0.0
     momentum: float = 0.9  
@@ -89,7 +73,7 @@ class OptimConfig:
 
 def build_optimizer(model: nn.Module, cfg: OptimConfig) -> torch.optim.Optimizer:
 
-    optimizer_name = cfg.optimizer.lower()
+    optimizer_name = cfg.optim.lower()
     decay_params = []
     no_decay_params = []
 
@@ -174,3 +158,50 @@ def freeze_module(module: Union[nn.Module, object]) -> None:
     if isinstance(module, nn.Module):
         for p in module.parameters():
             p.requires_grad_(False)
+
+@dataclass
+class ExportConfig:
+    enabled: bool = False  
+    model_path: Optional[str] = None
+    state_dict_path: Optional[str] = None
+    df: Optional[Any] = None
+    feature_names: Optional[List[str]] = None
+    ndigits: int = 4
+    tol: float = 0.0
+
+def export_artifacts(
+    model: nn.Module,
+    export_cfg: ExportConfig,
+    result: Optional[Dict] = None,
+) -> None:
+    if not export_cfg.enabled:
+        return
+
+    if export_cfg.model_path is None:
+        export_structure(
+            model, 
+            export_cfg.df, 
+            export_cfg.feature_names, 
+            ndigits=export_cfg.ndigits, 
+            tol=export_cfg.tol
+        )
+    else:
+        export_path = Path(export_cfg.model_path)
+        export_path.parent.mkdir(parents=True, exist_ok=True)
+        export_structure(
+            model, 
+            export_cfg.df, 
+            export_cfg.feature_names, 
+            txt_path=str(export_path), 
+            ndigits=export_cfg.ndigits, 
+            tol=export_cfg.tol
+        )
+        
+    if export_cfg.state_dict_path is not None:
+        sd_path = Path(export_cfg.state_dict_path)
+        sd_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if result is not None and "state_dict" in result:
+            torch.save(result["state_dict"], sd_path)
+        else:
+            torch.save(model.state_dict(), sd_path)

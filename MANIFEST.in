@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+include pyproject.toml
+
+global-exclude *.pyc
+global-exclude __pycache__/*
+exclude .gitignore
+prune .git
+prune .github

@@ -68,7 +68,7 @@ class DSMLoss(nn.Module):
         return total / k
     
 
-class DiscreteCELoss(nn.Module):
+class CELoss(nn.Module):
     def __init__(self, label_smoothing: float = 0.0, reduction: str = "mean", temperature: float = 1.0) -> None:
         super().__init__()
         if temperature <= 0:

@@ -10,19 +10,23 @@ class BLUnit(nn.Module):
         self,
         in_dim: int,
         num_basis: int,
+        first_act_func: str = "tanh",
         second_act_func: str = "relu",
         third_act_func: str = "abs",
         eps: float = 1e-8,
         constrain_lambda: bool = True,
         init_lambda: float = 1.0,
+        beta: float = 1.0,
     ) -> None:
         super().__init__()
         self.in_dim = int(in_dim)
         self.num_basis = int(num_basis)
+        self.first_act_func = str(first_act_func)
         self.second_act_func = str(second_act_func)
         self.third_act_func = str(third_act_func)
         self.eps = float(eps)
         self.constrain_lambda = bool(constrain_lambda)
+        self.beta = float(beta)
 
         init_lambda = float(init_lambda)
 
@@ -32,9 +36,9 @@ class BLUnit(nn.Module):
 
         self.lam = nn.Parameter(torch.full((3, self.num_basis), init_lambda))
 
-    def forward(self, z: torch.Tensor, beta: float = 1.0) -> torch.Tensor:
-        u = torch.tanh(self.lin_u(z))
-        c = U.second_activation(self.lin_c(z), self.second_act_func, beta=beta)
+    def forward(self, z: torch.Tensor) -> torch.Tensor:
+        u = U.first_activation(self.lin_u(z), self.first_act_func)
+        c = U.second_activation(self.lin_c(z), self.second_act_func, beta=self.beta)
         t = U.third_activation(self.lin_t(z), self.third_act_func)
 
         if self.constrain_lambda:
@@ -54,23 +58,27 @@ class BLBlock(nn.Module):
         self,
         in_dim: int,
         num_basis: int,
+        first_act_func: str = "tanh",
         second_act_func: str = "relu",
         third_act_func: str = "abs",
         constrain_lambda: bool = True,  
         init_lambda: float = 1.0,
+        beta: float = 1.0,
     ) -> None:
         super().__init__()
         self.unit = BLUnit(
             in_dim=in_dim,
             num_basis=num_basis,
+            first_act_func=first_act_func,
             second_act_func=second_act_func,
             third_act_func=third_act_func,
             constrain_lambda=constrain_lambda,  
             init_lambda=init_lambda,
+            beta=beta,
         )
 
-    def forward(self, x: torch.Tensor, beta: float = 1.0) -> torch.Tensor:
-        return self.unit(x, beta=beta)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.unit(x)
 
 
 class BLDeepBackbone(nn.Module):
@@ -78,10 +86,12 @@ class BLDeepBackbone(nn.Module):
         self,
         in_dim: int,
         hidden_dims: Sequence[int],
+        first_act_func: str = "tanh",
         second_act_func: str = "relu",
         third_act_func: str = "abs",
         constrain_lambda: bool = True,  
         init_lambda: float = 1.0,
+        beta: float = 1.0,
     ) -> None:
         super().__init__()
 
@@ -93,18 +103,20 @@ class BLDeepBackbone(nn.Module):
             BLBlock(
                 dims[i],
                 num_basis=hidden_dims[i],
+                first_act_func=first_act_func,
                 second_act_func=second_act_func,
                 third_act_func=third_act_func,
                 constrain_lambda=constrain_lambda,  
                 init_lambda=init_lambda,
+                beta=beta,
             )
             for i in range(len(hidden_dims))
         )
         self.out_dim = int(hidden_dims[-1])
 
-    def forward(self, x: torch.Tensor, beta: float = 1.0) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         for blk in self.blocks:
-            x = blk(x, beta=beta)
+            x = blk(x)
         return x
 
 
@@ -112,6 +124,7 @@ class BLDeep(nn.Module):
     def __init__(
         self,
         hidden_dims: Sequence[int],
+        first_act_func: str = "tanh",
         second_act_func: str = "relu",
         third_act_func: str = "abs",
         head_bias: bool = True,
@@ -119,11 +132,13 @@ class BLDeep(nn.Module):
         task: str = "continuous",
         constrain_lambda: bool = True, 
         init_lambda: float = 1.0,
+        beta: float = 1.0,
     ) -> None:
         super().__init__()
         self.hidden_dims = list(hidden_dims)
+        self.first_act_func = str(first_act_func)
         self.second_act_func = str(second_act_func)
-        self.third_act_func = third_act_func
+        self.third_act_func = str(third_act_func)
         self.head_bias = head_bias
         self.num_classes = num_classes
 
@@ -132,6 +147,7 @@ class BLDeep(nn.Module):
         self.task = task
         self.constrain_lambda = bool(constrain_lambda)  
         self.init_lambda = float(init_lambda)
+        self.beta = float(beta)
 
         self.x_dim: Optional[int] = None
         self.y_dim: Optional[int] = None
@@ -142,10 +158,12 @@ class BLDeep(nn.Module):
         self.backbone = BLDeepBackbone(
             in_dim=self.x_dim + self.y_dim,
             hidden_dims=self.hidden_dims,
+            first_act_func=self.first_act_func,
             second_act_func=self.second_act_func,
             third_act_func=self.third_act_func,
             constrain_lambda=self.constrain_lambda,  
             init_lambda=self.init_lambda,
+            beta=self.beta,
         )
         self.head = nn.Linear(self.backbone.out_dim, 1, bias=self.head_bias)
 
@@ -181,7 +199,7 @@ class BLDeep(nn.Module):
 
         self._build_architecture(x)
         
-    def score(self, x: torch.Tensor, y: torch.Tensor, beta: float = 1.0) -> torch.Tensor:
+    def score(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         if self.backbone is None:
             self.build(x, y)
 
@@ -198,13 +216,13 @@ class BLDeep(nn.Module):
                 )
 
         z = torch.cat([x, y.to(device=x.device, dtype=x.dtype)], dim=1)
-        feats = self.backbone(z, beta=beta)
+        feats = self.backbone(z)
         return self.head(feats)
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor, beta: float = 1.0) -> torch.Tensor:
-        return self.score(x, y, beta=beta)
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        return self.score(x, y)
 
-    def logits(self, x: torch.Tensor, beta: float = 1.0, num_classes: int | None = None) -> torch.Tensor:
+    def logits(self, x: torch.Tensor, num_classes: int | None = None) -> torch.Tensor:
         if self.task != "discrete":
             raise RuntimeError("logits() is only available when task='discrete'.")
 
@@ -217,4 +235,4 @@ class BLDeep(nn.Module):
         if self.backbone is None:
             self.build_for_discrete_inference(x, num_classes=m)
 
-        return U.enumerate_onehot_logits(self.score, x, m=m, beta=beta)
+        return U.enumerate_onehot_logits(self.score, x, m=m)

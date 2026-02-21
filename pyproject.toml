@@ -3,30 +3,41 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pybl"  
-version = "0.1.0"
-description = "Behavior Learning (BL): Discovering Hierarchical Optimization Structures from Data"
+name = "blnetwork"
+version = "0.1.1"
+description = "Behavior Learning (BL): Learning Hierarchical Optimization Structures from Data"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10.9"
 license = { file = "LICENSE" }
-authors = [{ name = "Yue Liang", email = "yue.liang@student.uni-tuebingen.de" }]
+authors = [
+  { name = "Yue Liang", email = "yue.liang@student.uni-tuebingen.de" }
+]
+
+
 dependencies = [
-  "torch",
-  "numpy",
-  "pandas",
-  "scikit-learn",
-  "matplotlib",
+  "torch>=2.2",
+  "numpy>=1.26",
+  "pandas>=2.1"
 ]
 
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
+  "Operating System :: OS Independent"
 ]
 
 [project.urls]
-Homepage = "https://github.com/YueLiang-hye/pybl"
-Issues = "https://github.com/YueLiang-hye/pybl/issues"
+Homepage = "https://github.com/MoonYLiang/Behavior-Learning"
+Issues = "https://github.com/MoonYLiang/Behavior-Learning/issues"
 
 [tool.setuptools]
 include-package-data = true
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["blnetwork*"]
+
+exclude = ["__pycache__*"]
