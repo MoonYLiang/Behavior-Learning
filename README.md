@@ -2,7 +2,10 @@
 
 # Behavior Learning (BL)
 
-Behavior Learning (BL) is a general-purpose machine learning framework grounded in behavioral science. It unifies predictive performance and intrinsic interpretability within a single modeling paradigm. BL learns explicit optimization structures from data by parameterizing a compositional utility function built from interpretable modular blocks. Each block represents a Utility Maximization Problem (UMP), a foundational framework of decision-making and optimization. BL supports architectures ranging from a single UMP to hierarchical compositions, enabling expressive yet structurally transparent models. Unlike post-hoc explanation methods, BL provides interpretability by design while maintaining strong empirical performance on high-dimensional tasks.
+This is the official GitHub repository for the paper  
+**"Behavior Learning (BL): Learning Hierarchical Optimization Structures from Data"**  
+(https://arxiv.org/abs/2602.20152).
+Behavior Learning (BL) is a general-purpose machine learning framework grounded in behavioral science. It unifies predictive performance and intrinsic interpretability within a single modeling paradigm. BL learns explicit optimization structures from data by parameterizing a compositional utility function built from interpretable modular blocks. Each block represents a Utility Maximization Problem (UMP), a foundational framework of decision-making and optimization. BL supports architectures ranging from a single UMP to hierarchical compositions, enabling expressive yet structurally transparent models. Unlike post-hoc explanation methods, BL provides interpretability by design while maintaining strong empirical performance on high-dimensional tasks. **Paper:** https://arxiv.org/abs/2602.20152
 
 ## Installation
 blnetwork can be installed via PyPI or directly from GitHub. 
@@ -99,5 +102,22 @@ In many cases, BL can achieve comparable (or slightly better) performance than a
 
 Other hyperparameters can be initialized based on standard MLP tuning, and then refined for the specific task.
 
+## Citation
+
+If you find this work useful, please consider citing:
+
+```bibtex
+@misc{ma2026behaviorlearningbllearning,
+  title={Behavior Learning (BL): Learning Hierarchical Optimization Structures from Data},
+  author={Zhenyao Ma and Yue Liang and Dongxu Li},
+  year={2026},
+  eprint={2602.20152},
+  archivePrefix={arXiv},
+  primaryClass={cs.LG},
+  url={https://arxiv.org/abs/2602.20152},
+}
+```
+
 ## Contact
+
 If you have any questions, please contact yue.liang@student.uni-tuebingen.de
