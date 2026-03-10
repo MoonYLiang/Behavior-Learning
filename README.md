@@ -99,6 +99,25 @@ In many cases, BL can achieve comparable (or slightly better) performance than a
 
 Other hyperparameters can be initialized based on standard MLP tuning, and then refined for the specific task.
 
+## Interpreting the exported model structure
+
+The exported model structure contains the **parameterized form of each BL block**, including the weights associated with the utility (`U`), inequality constraint (`C`), and equality constraint (`T`) components.
+
+For an input vector `z`, each BL unit defines
+$U(z) = \sum_i a_i z_i, \quad C(z) = \sum_i b_i z_i, \quad T(z) = \sum_i c_i z_i$
+
+and produces the score $B(z) = \lambda_U U(z) - \lambda_C C(z) - \lambda_T T(z).$
+
+From an optimization perspective, this corresponds to a utility-maximization problem
+
+$$
+\max_z U(z) \quad s.t. C(z) \le 0, T(z) = 0.
+$$
+
+In the implemented model, the constraints are relaxed into a penalized objective using the learned weights $\lambda_U, \lambda_C, \lambda_T$.
+
+In deeper BL architectures, higher-level blocks take outputs of lower-level blocks as inputs, forming a **hierarchical optimization structure**. The exported parameters therefore allow the symbolic structure of the learned model to be reconstructed directly.
+
 ## Citation
 
 If you find this work useful, please consider citing:
