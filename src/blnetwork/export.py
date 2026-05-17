@@ -30,15 +30,20 @@ def _get_bl_unit(block):
 
 
 def _get_lambdas(unit):
-    lam = unit.lam 
     if getattr(unit, "constrain_lambda", False):
         eps = float(getattr(unit, "eps", 1e-8))
-        lam = F.softplus(lam) + eps
-    
-    lam_u = _safe_numpy(lam[0])
-    lam_c = _safe_numpy(lam[1])
-    lam_t = _safe_numpy(lam[2])
-    
+        lam_u = F.softplus(unit.lam_u) + eps
+        lam_c = F.softplus(unit.lam_c) + eps
+        lam_t = F.softplus(unit.lam_t) + eps
+    else:
+        lam_u = unit.lam_u
+        lam_c = unit.lam_c
+        lam_t = unit.lam_t
+
+    lam_u = _safe_numpy(lam_u)
+    lam_c = _safe_numpy(lam_c)
+    lam_t = _safe_numpy(lam_t)
+
     return lam_u, lam_c, lam_t
 
 
@@ -124,59 +129,60 @@ def _print_blocks(
 
     unit = _get_bl_unit(block)
 
-    num_basis = int(unit.lin_u.out_features)
+    lin_us = list(unit.lin_u)
+    lin_cs = list(unit.lin_c)
+    lin_ts = list(unit.lin_t)
+
+    all_lins = lin_us + lin_cs + lin_ts
+    if len(all_lins) == 0:
+        raise ValueError("BLUnit has no U/C/T linear components to export.")
+
+    num_basis = int(all_lins[0].out_features)
 
     lam_u, lam_c, lam_t = _get_lambdas(unit)
-
-    w_u = _safe_numpy(unit.lin_u.weight)
-    b_u = _safe_numpy(unit.lin_u.bias)
-    w_c = _safe_numpy(unit.lin_c.weight)
-    b_c = _safe_numpy(unit.lin_c.bias)
-    w_t = _safe_numpy(unit.lin_t.weight)
-    b_t = _safe_numpy(unit.lin_t.bias)
 
     for j in range(num_basis):
         block_id = j + 1
         print(f"--B{layer_idx}{block_id}")
 
-        # U part
-        lines = _emit_part_lines(
-            "U",
-            lam_val=float(lam_u[j]),
-            w_row=w_u[j],
-            b_val=float(b_u[j]),
-            feature_names=feature_names,
-            ndigits=ndigits,
-            tol=tol,
-        )
-        for ln in lines:
-            print(ln)
+        for i, lin_u in enumerate(lin_us):
+            lines = _emit_part_lines(
+                "U" if len(lin_us) == 1 else f"U{i+1}",
+                lam_val=float(lam_u[i, j]),
+                w_row=_safe_numpy(lin_u.weight[j]),
+                b_val=float(_safe_numpy(lin_u.bias[j])),
+                feature_names=feature_names,
+                ndigits=ndigits,
+                tol=tol,
+            )
+            for ln in lines:
+                print(ln)
 
-        # C part
-        lines = _emit_part_lines(
-            "C",
-            lam_val=float(lam_c[j]),
-            w_row=w_c[j],
-            b_val=float(b_c[j]),
-            feature_names=feature_names,
-            ndigits=ndigits,
-            tol=tol,
-        )
-        for ln in lines:
-            print(ln)
+        for i, lin_c in enumerate(lin_cs):
+            lines = _emit_part_lines(
+                "C" if len(lin_cs) == 1 else f"C{i+1}",
+                lam_val=float(lam_c[i, j]),
+                w_row=_safe_numpy(lin_c.weight[j]),
+                b_val=float(_safe_numpy(lin_c.bias[j])),
+                feature_names=feature_names,
+                ndigits=ndigits,
+                tol=tol,
+            )
+            for ln in lines:
+                print(ln)
 
-        # T part
-        lines = _emit_part_lines(
-            "T",
-            lam_val=float(lam_t[j]),
-            w_row=w_t[j],
-            b_val=float(b_t[j]),
-            feature_names=feature_names,
-            ndigits=ndigits,
-            tol=tol,
-        )
-        for ln in lines:
-            print(ln)
+        for i, lin_t in enumerate(lin_ts):
+            lines = _emit_part_lines(
+                "T" if len(lin_ts) == 1 else f"T{i+1}",
+                lam_val=float(lam_t[i, j]),
+                w_row=_safe_numpy(lin_t.weight[j]),
+                b_val=float(_safe_numpy(lin_t.bias[j])),
+                feature_names=feature_names,
+                ndigits=ndigits,
+                tol=tol,
+            )
+            for ln in lines:
+                print(ln)
 
         print("")  
 
@@ -250,7 +256,10 @@ def export_structure(
         unit0 = _get_bl_unit(blocks[0])
         if not hasattr(unit0, "lin_u"):
             raise AttributeError("Cannot infer input dim from BLUnit. Expected 'lin_u'.")
-        in_dim = int(unit0.lin_u.in_features)
+        lin_us = list(unit0.lin_u)
+        if len(lin_us) == 0:
+            raise ValueError("Cannot infer input dim from BLUnit because lin_u is empty.")
+        in_dim = int(lin_us[0].in_features)
         feat_names = [f"x{i+1}" for i in range(in_dim)]
 
     if txt_path is None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple, Union, List
+from typing import Any, Dict, Optional, Tuple, Union, List, Sequence
 from pathlib import Path
 
 import torch 
@@ -23,6 +23,7 @@ except Exception:
     from torch.cuda.amp import GradScaler 
 
 from blnetwork.export import export_structure
+from blnetwork.model import BLDeep
 
 Batch = Union[Tuple[torch.Tensor, torch.Tensor], Dict[str, torch.Tensor]]
 
@@ -69,6 +70,46 @@ class OptimConfig:
     lr: float = 1e-3
     weight_decay: float = 0.0
     momentum: float = 0.9  
+
+
+@dataclass
+class ModelConfig:
+    hidden_dims: Sequence[int]
+    num_u: int = 1
+    num_c: int = 1
+    num_t: int = 0
+    first_act_func: str = "none"
+    second_act_func: str = "relu"
+    third_act_func: str = "abs"
+    head_bias: bool = True
+    num_classes: Optional[int] = None
+    task: str = "continuous"
+    constrain_lambda: bool = True
+    init_lambda: float = 1.0
+    init_lambda_u: Optional[float] = None
+    init_lambda_c: Optional[float] = None
+    init_lambda_t: Optional[float] = None
+    beta: float = 1.0
+
+    def build(self) -> BLDeep:
+        return BLDeep(
+            hidden_dims=self.hidden_dims,
+            num_u=self.num_u,
+            num_c=self.num_c,
+            num_t=self.num_t,
+            first_act_func=self.first_act_func,
+            second_act_func=self.second_act_func,
+            third_act_func=self.third_act_func,
+            head_bias=self.head_bias,
+            num_classes=self.num_classes,
+            task=self.task,
+            constrain_lambda=self.constrain_lambda,
+            init_lambda=self.init_lambda,
+            init_lambda_u=self.init_lambda_u,
+            init_lambda_c=self.init_lambda_c,
+            init_lambda_t=self.init_lambda_t,
+            beta=self.beta,
+        )
 
 
 def build_optimizer(model: nn.Module, cfg: OptimConfig) -> torch.optim.Optimizer:
