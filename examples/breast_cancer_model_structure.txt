@@ -12,33 +12,33 @@ lambda 1.4891
 ----Cell_Shape_Uniformity     -0.0966
 ----Marginal_Adhesion     0.1329
 ----Single_Epi_Cell_Size     0.2089
-----Bare_Nuclei     -0.1061
+----Bare_Nuclei     -0.106
 ----Bland_Chromatin     0.2117
 ----Normal_Nucleoli     0.1185
-----Mitoses     0.2649
+----Mitoses     0.265
 ----Class     -0.1859
-----C     -0.1851
+----C     -0.1852
 C
-lambda 1.4746
+lambda 1.4747
 ----Clump_Thickness     -0.1556
 ----Cell_Size_Uniformity     -0.3932
 ----Cell_Shape_Uniformity     0.146
 ----Marginal_Adhesion     -0.2995
-----Single_Epi_Cell_Size     0.2323
+----Single_Epi_Cell_Size     0.2324
 ----Bare_Nuclei     -0.1254
-----Bland_Chromatin     -0.1548
+----Bland_Chromatin     -0.1549
 ----Normal_Nucleoli     0.0492
-----Mitoses     -0.0419
+----Mitoses     -0.042
 ----Class     0.4896
-----C     -0.0991
+----C     -0.099
 T
-lambda 1.4583
+lambda 1.459
 ----Clump_Thickness     -0.1522
 ----Cell_Size_Uniformity     0.1777
 ----Cell_Shape_Uniformity     0.0441
 ----Marginal_Adhesion     0.0201
 ----Single_Epi_Cell_Size     -0.0016
-----Bare_Nuclei     -0.0004
+----Bare_Nuclei     -0.0003
 ----Bland_Chromatin     0.1181
 ----Normal_Nucleoli     -0.2181
 ----Mitoses     0.0299
@@ -47,66 +47,66 @@ lambda 1.4583
 
 --B12
 U
-lambda 1.3909
-----Clump_Thickness     -0.1755
-----Cell_Size_Uniformity     0.1408
-----Cell_Shape_Uniformity     -0.0608
-----Marginal_Adhesion     -0.2031
+lambda 1.3931
+----Clump_Thickness     -0.1756
+----Cell_Size_Uniformity     0.1407
+----Cell_Shape_Uniformity     -0.0609
+----Marginal_Adhesion     -0.2032
 ----Single_Epi_Cell_Size     0.0436
-----Bare_Nuclei     -0.2677
+----Bare_Nuclei     -0.2678
 ----Bland_Chromatin     -0.0918
 ----Normal_Nucleoli     -0.2197
-----Mitoses     0.0926
+----Mitoses     0.0925
 ----Class     0.0004
-----C     -0.0478
+----C     -0.0476
 C
-lambda 1.2498
-----Clump_Thickness     0.0921
+lambda 1.2508
+----Clump_Thickness     0.0922
 ----Cell_Size_Uniformity     0.1936
-----Cell_Shape_Uniformity     0.0625
+----Cell_Shape_Uniformity     0.0626
 ----Marginal_Adhesion     0.1787
 ----Single_Epi_Cell_Size     0.2855
 ----Bare_Nuclei     0.3551
 ----Bland_Chromatin     -0.0566
 ----Normal_Nucleoli     0.3116
-----Mitoses     0.1594
-----Class     -0.0635
-----C     -0.2062
+----Mitoses     0.1595
+----Class     -0.0636
+----C     -0.2063
 T
-lambda 1.4531
+lambda 1.4538
 ----Clump_Thickness     -0.0981
 ----Cell_Size_Uniformity     0.0664
 ----Cell_Shape_Uniformity     -0.0949
 ----Marginal_Adhesion     0.2003
-----Single_Epi_Cell_Size     -0.1568
+----Single_Epi_Cell_Size     -0.1567
 ----Bare_Nuclei     -0.1897
 ----Bland_Chromatin     -0.1329
-----Normal_Nucleoli     0.2202
+----Normal_Nucleoli     0.2201
 ----Mitoses     0.0229
 ----Class     0.2669
 ----C     -0.4042
 
 --B21
 U
-lambda 1.3233
+lambda 1.3255
 ----B11     -0.7187
-----B12     0.2163
+----B12     0.2161
 ----C     0.4539
 C
-lambda 1.3201
-----B11     0.744
+lambda 1.3235
+----B11     0.7441
 ----B12     -0.5191
-----C     -0.6681
+----C     -0.6683
 T
-lambda 1.5103
+lambda 1.5106
 ----B11     0.5634
 ----B12     -0.3886
-----C     0.3787
+----C     0.3786
 
 ========================================================================
 OUTPUT LINEAR(S)
 ========================================================================
 Output Layer
 weight values = [-0.4332]
-bias values = [0.5522]
+bias values = [0.5528]
 
