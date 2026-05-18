@@ -10,8 +10,8 @@ __all__ = [
     "infer_continuous_y_dim",
     "validate_continuous_y",
     "validate_class_indices",
-    "prepare_discrete_y",
-    "prepare_continuous_y",
+    "format_discrete_y",
+    "format_continuous_y",
     "infer_num_classes",
     "enumerate_class_logits",
     "enumerate_onehot_logits",
@@ -111,7 +111,7 @@ def validate_class_indices(
     return y_long
 
 
-def prepare_discrete_y(
+def format_discrete_y(
     y: torch.Tensor,
     num_classes: int,
     device: torch.device,
@@ -122,7 +122,7 @@ def prepare_discrete_y(
     return y_onehot.to(device=device, dtype=dtype)
 
 
-def prepare_continuous_y(
+def format_continuous_y(
     y: torch.Tensor,
     expected_y_dim: int,
     device: torch.device,

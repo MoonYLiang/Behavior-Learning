@@ -287,9 +287,9 @@ class BLDeep(nn.Module):
         U.validate_x(x, expected_x_dim=self.x_dim)
 
         if self.task == "discrete":
-            y = U.prepare_discrete_y(y, self.num_classes, x.device, x.dtype)
+            y = U.format_discrete_y(y, self.num_classes, x.device, x.dtype)
         else:
-            y = U.prepare_continuous_y(y, self.y_dim, x.device, x.dtype)
+            y = U.format_continuous_y(y, self.y_dim, x.device, x.dtype)
 
         z = torch.cat([x, y], dim=1)
         feats = self.backbone(z)
